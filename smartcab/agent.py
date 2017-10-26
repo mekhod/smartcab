@@ -3,7 +3,6 @@ import math
 from environment import Agent, Environment
 from planner import RoutePlanner
 from simulator import Simulator
-from numpy.random import choice
 import numpy as np
 
 class LearningAgent(Agent):
@@ -53,7 +52,7 @@ class LearningAgent(Agent):
             # self.epsilon -= 0.05
 
             ## second decaying function
-            a = 0.005
+            a = 0.0008
             self.epsilon = np.exp(-1*a*self.n_trial)
 
             ## third decaying function
@@ -137,18 +136,17 @@ class LearningAgent(Agent):
         # Otherwise, choose an action with the highest Q-value for the current state
         # Be sure that when choosing an action with highest Q-value that you randomly select between actions that "tie".
 
-        if not self.learning:
-            action = choice(self.valid_actions)
-        elif self.learning:
-            max_Q = self.get_maxQ(state)
-            probs = np.array([1.001 if self.Q[state][str(action)] == max_Q else self.epsilon
-                              for action in self.valid_actions])
-            probs /= probs.sum()
-            action = choice(self.valid_actions, 1, p=probs)
+        if self.learning:
+            if (random.uniform(0, 1) < self.epsilon):
+                action = random.choice(self.valid_actions)
+            else:
+                max_Q = self.get_maxQ(state)
+                action = random.choice([action for action in self.valid_actions
+                                        if self.Q[state][str(action)] == max_Q])
         else:
             max_Q = self.get_maxQ(state)
-            action = choice([action for action in self.valid_actions
-                             if self.Q[state][action] == max_Q])
+            action = random.choice([action for action in self.valid_actions
+                                    if self.Q[state][str(action)] == max_Q])
 
         return action
 
@@ -163,15 +161,30 @@ class LearningAgent(Agent):
         ###########
         # When learning, implement the value iteration update rule
         #   Use only the learning rate 'alpha' (do not use the discount factor 'gamma')
-        if not (state in self.state_alpha_n.keys()):
-            self.state_alpha_n[state] = {str(a): 0 for a in self.valid_actions}
+        if self.learning:
 
-        self.state_alpha_n[state][str(action[0])] += 1
+            """
+            Here, every time when a specific combination of a state and an action is met in the 
+            training process, one unit is added to the corresponding state_alpha_n[state][action] 
+            value. In fact, the state_alpha_n dictionary shows the frequency that every state/action 
+            combination appears during the training process. The frequencies in this dictionary 
+            is used to adjust alpha values, which is a part of Q-learning algorithm. This way, for 
+            Q-values calculation, there will be higher weights on the rewards that actions receive
+            in the beginning when frequencies are low and later when the frequencies increase, 
+            there will be higher weights on the previous Q-values.
+            The use of alpha_fraction instead of alpha is more important when rewards are stochastic, 
+            as then a Q-value converges to the expected value of the rewards; here, the rewards 
+            are not random (stochastic), so either alpha_fraction or alpha can be used.
+            """
 
-        alpha_fraction = self.alpha / self.state_alpha_n[state][str(action[0])]
-        self.Q[state][str(action[0])] = \
-            self.Q[state][str(action[0])] * (1 - alpha_fraction ) + reward * alpha_fraction
+            if not (state in self.state_alpha_n.keys()):
+                self.state_alpha_n[state] = {str(a): 0 for a in self.valid_actions}
 
+            self.state_alpha_n[state][str(action)] += 1
+
+            alpha_fraction = self.alpha / self.state_alpha_n[state][str(action)]
+            self.Q[state][str(action)] = \
+                self.Q[state][str(action)] * (1 - alpha_fraction ) + reward * alpha_fraction
         return
 
 
@@ -207,7 +220,7 @@ def run():
     #   learning   - set to True to force the driving agent to use Q-learning
     #    * epsilon - continuous value for the exploration factor, default is 1
     #    * alpha   - continuous value for the learning rate, default is 0.5
-    agent = env.create_agent(LearningAgent, learning=True, epsilon=1, alpha=0.7)
+    agent = env.create_agent(LearningAgent, learning=True, epsilon=1, alpha=0.5)
     
     ##############
     # Follow the driving agent
@@ -229,7 +242,7 @@ def run():
     # Flags:
     #   tolerance  - epsilon tolerance before beginning testing, default is 0.05 
     #   n_test     - discrete number of testing trials to perform, default is 0
-    sim.run(n_test=30, tolerance=0.05)
+    sim.run(n_test=100, tolerance=0.05)
 
 
 if __name__ == '__main__':
