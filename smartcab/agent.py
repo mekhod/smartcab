@@ -52,7 +52,7 @@ class LearningAgent(Agent):
             # self.epsilon -= 0.05
 
             ## second decaying function
-            a = 0.0008
+            a = 0.0006
             self.epsilon = np.exp(-1*a*self.n_trial)
 
             ## third decaying function
@@ -62,8 +62,8 @@ class LearningAgent(Agent):
 
             self.n_trial += 1
 
-
         return None
+
 
     def build_state(self):
         """ The build_state function is called when the agent requests data from the 
@@ -78,7 +78,7 @@ class LearningAgent(Agent):
         ########### 
         ## TO DO ##
         ###########
-        
+
         # NOTE : you are not allowed to engineer features outside of the inputs available.
         # Because the aim of this project is to teach Reinforcement Learning, we have placed 
         # constraints in order for you to learn how to adjust epsilon and alpha, and thus learn about the balance between exploration and exploitation.
@@ -98,8 +98,7 @@ class LearningAgent(Agent):
         ## TO DO ##
         ###########
         # Calculate the maximum Q-value of all actions for a given state
-        self.createQ(state)
-        maxQ = np.max(list(self.Q[state].values()))
+        maxQ = max(self.Q[state].values())
 
         return maxQ 
 
@@ -113,7 +112,7 @@ class LearningAgent(Agent):
         # When learning, check if the 'state' is not in the Q-table
         # If it is not, create a new dictionary for that state
         #   Then, for each action available, set the initial Q-value to 0.0
-        if not (state in self.Q.keys()):
+        if (not (state in self.Q.keys()) and self.learning):
             self.Q[state] = {str(action): 0 for action in self.valid_actions}
 
         return
@@ -144,9 +143,7 @@ class LearningAgent(Agent):
                 action = random.choice([action for action in self.valid_actions
                                         if self.Q[state][str(action)] == max_Q])
         else:
-            max_Q = self.get_maxQ(state)
-            action = random.choice([action for action in self.valid_actions
-                                    if self.Q[state][str(action)] == max_Q])
+            action = random.choice(self.valid_actions)
 
         return action
 
@@ -167,11 +164,13 @@ class LearningAgent(Agent):
             Here, every time when a specific combination of a state and an action is met in the 
             training process, one unit is added to the corresponding state_alpha_n[state][action] 
             value. In fact, the state_alpha_n dictionary shows the frequency that every state/action 
-            combination appears during the training process. The frequencies in this dictionary 
-            is used to adjust alpha values, which is a part of Q-learning algorithm. This way, for 
-            Q-values calculation, there will be higher weights on the rewards that actions receive
-            in the beginning when frequencies are low and later when the frequencies increase, 
-            there will be higher weights on the previous Q-values.
+            combination appears during the training process.
+            
+            The frequencies in this dictionary is used to adjust alpha values, which is a part of 
+            Q-learning algorithm. This way, for Q-values calculation, there will be higher weights on 
+            the rewards that actions receive in the beginning when frequencies are low and later when 
+            the frequencies increase, there will be higher weights on the previous Q-values.
+            
             The use of alpha_fraction instead of alpha is more important when rewards are stochastic, 
             as then a Q-value converges to the expected value of the rewards; here, the rewards 
             are not random (stochastic), so either alpha_fraction or alpha can be used.
